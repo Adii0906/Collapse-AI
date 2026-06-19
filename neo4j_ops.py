@@ -2,61 +2,22 @@
 neo4j_ops.py — All Neo4j interactions for System Collapse AI
 """
 
-import os
-from neo4j import GraphDatabase, basic_auth
-import streamlit as st
-from dotenv import load_dotenv
+from neo4j import GraphDatabase
 
-load_dotenv()
-
-
-def _get_streamlit_secret(key: str, default: str = "") -> str:
-    value = st.secrets.get(key, None)
-    if value:
-        return value
-    for section in ("default", "general", "secrets"):
-        section_data = st.secrets.get(section, {})
-        if isinstance(section_data, dict) and section_data.get(key):
-            return section_data.get(key)
-    return default
-
-
-def _validate_neo4j_uri(uri: str):
-    if not uri or "://" not in uri:
-        raise ValueError("Neo4j URI must be configured and use a supported scheme like neo4j+s:// or bolt://")
-    scheme = uri.split("://", 1)[0].lower()
-    supported = ["bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"]
-    if scheme not in supported:
-        raise ValueError(f"URI scheme '{scheme}' is not supported. Supported URI schemes are {supported}.")
+from config import get_neo4j_config
 
 
 # ── Connection ────────────────────────────────────────────────────────────────
-# ── Connection ────────────────────────────────────────────────────────────────
-def _get_neo4j_database() -> str:
-    return _get_streamlit_secret("NEO4J_DATABASE", os.getenv("NEO4J_DATABASE", ""))
-
-
 def _get_driver():
-    uri = _get_streamlit_secret("NEO4J_URI", os.getenv("NEO4J_URI", ""))
-    _validate_neo4j_uri(uri)
-    username = _get_streamlit_secret("NEO4J_USERNAME", os.getenv("NEO4J_USERNAME", "neo4j"))
-    password = _get_streamlit_secret("NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
-    if not password:
-        raise ValueError("NEO4J_PASSWORD is required")
-    return GraphDatabase.driver(uri, auth=basic_auth(username, password))
+    uri, user, password = get_neo4j_config()
+    return GraphDatabase.driver(uri, auth=(user, password))
 
 
 def _run(query: str, params: dict = None):
     driver = _get_driver()
-    database = _get_neo4j_database()
     try:
-        if database:
-            with driver.session(database=database) as session:
-                result = session.run(query, params or {})
-        else:
-            with driver.session() as session:
-                result = session.run(query, params or {})
-        return result.data()
+        with driver.session() as session:
+            result = session.run(query, params or {})
             return result.data()
     finally:
         driver.close()

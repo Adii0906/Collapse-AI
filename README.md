@@ -2,6 +2,7 @@
 
 > Neo4j-powered Agentic GraphRAG system that converts startup ideas into dependency graphs and predicts cascading failures.
 
+
 Most AI agents today are great at building things, but they're terrible at predicting failure.
 
 When we use AI coding tools, we keep saying "build this", "refine this", "add this feature", and eventually we end up with a complex system. But neither the AI nor the developer has a clear understanding of the project's critical dependencies and failure points.

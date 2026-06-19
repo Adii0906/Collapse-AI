@@ -1,21 +1,21 @@
 """
-agents.py — Five AI agents powering Collapse AI
+agents.py — Five AI agents powering System Collapse AI
 Uses Mistral API via LangChain
 """
 
 import json
-import os
 import re
-import streamlit as st
 from langchain_mistralai import ChatMistralAI
 from langchain_core.messages import HumanMessage, SystemMessage
+
+from config import get_secret
 
 
 # ── LLM factory ──────────────────────────────────────────────────────────────
 def _get_llm(temperature: float = 0.3):
-    api_key = st.secrets.get("MISTRAL_API_KEY", os.getenv("MISTRAL_API_KEY", ""))
+    api_key = get_secret("MISTRAL_API_KEY")
     return ChatMistralAI(
-        model="mistral-medium-latest",
+        model="mistral-large-latest",
         temperature=temperature,
         mistral_api_key=api_key,
     )

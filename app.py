@@ -1,11 +1,10 @@
 import streamlit as st
 import json
-import os
 from neo4j import GraphDatabase
+from config import get_neo4j_config, get_secret
 from pyvis.network import Network
 import tempfile
 import streamlit.components.v1 as components
-from dotenv import load_dotenv
 from agents import (
     run_requirement_discovery,
     run_dependency_mapping,
@@ -25,7 +24,7 @@ from neo4j_ops import (
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Collapse AI",
+    page_title="System Collapse AI",
     page_icon="💀",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -94,8 +93,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-load_dotenv()
 
 # ── Session state init ────────────────────────────────────────────────────────
 for key, default in {
@@ -185,27 +182,6 @@ def build_pyvis(nodes, edges, highlighted: list = None, selected: str = None) ->
     return html
 
 
-def _get_streamlit_secret(key: str, default: str = "") -> str:
-    value = st.secrets.get(key, None)
-    if value:
-        return value
-    for section in ("default", "general", "secrets"):
-        section_data = st.secrets.get(section, {})
-        if isinstance(section_data, dict) and section_data.get(key):
-            return section_data.get(key)
-    return default
-
-
-def _validate_neo4j_uri(uri: str):
-    if not uri or "://" not in uri:
-        raise ValueError("Neo4j URI must be set and use a supported scheme like neo4j+s:// or bolt://")
-    scheme = uri.split("://", 1)[0].lower()
-    supported = ["bolt", "bolt+s", "bolt+ssc", "neo4j", "neo4j+s", "neo4j+ssc"]
-    if scheme not in supported:
-        raise ValueError(
-            f"URI scheme '{scheme}' is not supported. Supported URI schemes are {supported}."
-        )
-
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="logo-text"><span class="logo-red">SYS</span><span class="logo-white">::COLLAPSE</span></div>', unsafe_allow_html=True)
@@ -213,34 +189,22 @@ with st.sidebar:
     st.divider()
 
     st.markdown('<div class="section-header">Neo4j Status</div>', unsafe_allow_html=True)
-    uri = _get_streamlit_secret("NEO4J_URI", os.getenv("NEO4J_URI", ""))
-    username = _get_streamlit_secret("NEO4J_USERNAME", os.getenv("NEO4J_USERNAME", "neo4j"))
-    password = _get_streamlit_secret("NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
-    database = _get_streamlit_secret("NEO4J_DATABASE", os.getenv("NEO4J_DATABASE", ""))
+    uri, username, password = get_neo4j_config()
 
-    if not uri or not password:
+    if not uri or not username or not password:
         st.markdown('🔴 <span style="color:#ef4444;font-size:13px;">Connection Failed</span>', unsafe_allow_html=True)
-        st.caption("NEO4J_URI and NEO4J_PASSWORD are required. Configure them in .streamlit/secrets.toml or environment variables.")
+        st.caption("NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD are required. Configure them in .streamlit/secrets.toml or a .env file.")
+        if uri:
+            st.caption(f"Loaded URI: {uri}")
     else:
         try:
-            from neo4j import basic_auth
-            _validate_neo4j_uri(uri)
-            driver = GraphDatabase.driver(uri, auth=basic_auth(username, password))
-            if database:
-                with driver.session(database=database) as session:
-                    session.run("RETURN 1")
-            else:
-                with driver.session() as session:
-                    session.run("RETURN 1")
+            driver = GraphDatabase.driver(uri, auth=(username, password))
+            driver.verify_connectivity()
             st.markdown('🟢 <span style="color:#10b981;font-size:13px;">AuraDB Connected</span>', unsafe_allow_html=True)
             driver.close()
         except Exception as e:
             st.markdown('🔴 <span style="color:#ef4444;font-size:13px;">Connection Failed</span>', unsafe_allow_html=True)
-            error_msg = str(e)
-            if "Unauthorized" in error_msg or "unauthorized" in error_msg:
-                st.caption("Auth failed. Check NEO4J_USERNAME and NEO4J_PASSWORD.")
-            else:
-                st.caption(error_msg[:200])
+            st.caption(str(e)[:200])
 
     st.divider()
     st.markdown('<div class="section-header">How it works</div>', unsafe_allow_html=True)
@@ -269,9 +233,8 @@ with st.sidebar:
             st.rerun()
 
 
-
 # ── Main layout ───────────────────────────────────────────────────────────────
-st.markdown('<h1 style="font-family:JetBrains Mono;font-size:28px;color:#f1f5f9;margin-bottom:4px;">⚡ Collapse AI</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="font-family:JetBrains Mono;font-size:28px;color:#f1f5f9;margin-bottom:4px;">⚡ System Collapse AI</h1>', unsafe_allow_html=True)
 st.markdown('<p style="color:#475569;font-size:14px;margin-bottom:24px;">Convert startup ideas into dependency graphs. Predict cascading failures. Survive the collapse.</p>', unsafe_allow_html=True)
 
 # ── Input section ─────────────────────────────────────────────────────────────
