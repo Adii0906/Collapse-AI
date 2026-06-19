@@ -216,20 +216,31 @@ with st.sidebar:
     uri = _get_streamlit_secret("NEO4J_URI", os.getenv("NEO4J_URI", ""))
     username = _get_streamlit_secret("NEO4J_USERNAME", os.getenv("NEO4J_USERNAME", "neo4j"))
     password = _get_streamlit_secret("NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
+    database = _get_streamlit_secret("NEO4J_DATABASE", os.getenv("NEO4J_DATABASE", ""))
 
-    if not uri:
+    if not uri or not password:
         st.markdown('🔴 <span style="color:#ef4444;font-size:13px;">Connection Failed</span>', unsafe_allow_html=True)
-        st.caption("NEO4J_URI is not configured. Set the URI in .streamlit/secrets.toml or environment variables.")
+        st.caption("NEO4J_URI and NEO4J_PASSWORD are required. Configure them in .streamlit/secrets.toml or environment variables.")
     else:
         try:
+            from neo4j import basic_auth
             _validate_neo4j_uri(uri)
-            driver = GraphDatabase.driver(uri, auth=(username, password))
-            driver.verify_connectivity()
+            driver = GraphDatabase.driver(uri, auth=basic_auth(username, password))
+            if database:
+                with driver.session(database=database) as session:
+                    session.run("RETURN 1")
+            else:
+                with driver.session() as session:
+                    session.run("RETURN 1")
             st.markdown('🟢 <span style="color:#10b981;font-size:13px;">AuraDB Connected</span>', unsafe_allow_html=True)
             driver.close()
         except Exception as e:
             st.markdown('🔴 <span style="color:#ef4444;font-size:13px;">Connection Failed</span>', unsafe_allow_html=True)
-            st.caption(str(e)[:200])
+            error_msg = str(e)
+            if "Unauthorized" in error_msg or "unauthorized" in error_msg:
+                st.caption("Auth failed. Check NEO4J_USERNAME and NEO4J_PASSWORD.")
+            else:
+                st.caption(error_msg[:200])
 
     st.divider()
     st.markdown('<div class="section-header">How it works</div>', unsafe_allow_html=True)

@@ -3,7 +3,7 @@ neo4j_ops.py — All Neo4j interactions for System Collapse AI
 """
 
 import os
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, basic_auth
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -31,19 +31,32 @@ def _validate_neo4j_uri(uri: str):
 
 
 # ── Connection ────────────────────────────────────────────────────────────────
+# ── Connection ────────────────────────────────────────────────────────────────
+def _get_neo4j_database() -> str:
+    return _get_streamlit_secret("NEO4J_DATABASE", os.getenv("NEO4J_DATABASE", ""))
+
+
 def _get_driver():
     uri = _get_streamlit_secret("NEO4J_URI", os.getenv("NEO4J_URI", ""))
     _validate_neo4j_uri(uri)
-    user = _get_streamlit_secret("NEO4J_USERNAME", os.getenv("NEO4J_USERNAME", "neo4j"))
+    username = _get_streamlit_secret("NEO4J_USERNAME", os.getenv("NEO4J_USERNAME", "neo4j"))
     password = _get_streamlit_secret("NEO4J_PASSWORD", os.getenv("NEO4J_PASSWORD", ""))
-    return GraphDatabase.driver(uri, auth=(user, password))
+    if not password:
+        raise ValueError("NEO4J_PASSWORD is required")
+    return GraphDatabase.driver(uri, auth=basic_auth(username, password))
 
 
 def _run(query: str, params: dict = None):
     driver = _get_driver()
+    database = _get_neo4j_database()
     try:
-        with driver.session() as session:
-            result = session.run(query, params or {})
+        if database:
+            with driver.session(database=database) as session:
+                result = session.run(query, params or {})
+        else:
+            with driver.session() as session:
+                result = session.run(query, params or {})
+        return result.data()
             return result.data()
     finally:
         driver.close()
