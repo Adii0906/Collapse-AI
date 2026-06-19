@@ -2,6 +2,18 @@
 
 > Neo4j-powered Agentic GraphRAG system that converts startup ideas into dependency graphs and predicts cascading failures.
 
+Most AI agents today are great at building things, but they're terrible at predicting failure.
+
+When we use AI coding tools, we keep saying "build this", "refine this", "add this feature", and eventually we end up with a complex system. But neither the AI nor the developer has a clear understanding of the project's critical dependencies and failure points.
+
+ Collapse AI, an agentic system that maps dependencies from a project idea or document and predicts cascading failures before they happen.
+
+Instead of answering "How do I build this?", it answers "What breaks if this fails?"
+
+Using document intelligence, the system extracts key entities and dependencies, stores them as a graph in Neo4j, and uses AI agents to simulate failure scenarios, identify single points of failure, calculate risk scores, and suggest recovery plans.
+
+Think of it as a stress test for ideas, projects, and AI systems before time, money, and tokens are wasted building the wrong thing.
+
 ---
 
 ## Architecture
