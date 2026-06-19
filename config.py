@@ -1,10 +1,17 @@
 """Load Neo4j and API credentials from Streamlit secrets or environment."""
 
 import os
+import ssl
 
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def get_ssl_context() -> ssl.SSLContext:
+    """Use the OS trust store (certifi alone fails on some Windows setups)."""
+    return ssl.create_default_context()
 
 
 def get_secret(key: str, default: str = "") -> str:
@@ -27,3 +34,26 @@ def get_neo4j_config() -> tuple[str, str, str]:
     username = get_secret("NEO4J_USERNAME")
     password = get_secret("NEO4J_PASSWORD")
     return uri, username, password
+
+
+def make_mistral_http_clients(api_key: str, timeout: int = 120) -> tuple[httpx.Client, httpx.AsyncClient]:
+    base_url = get_secret("MISTRAL_BASE_URL", "https://api.mistral.ai/v1")
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": f"Bearer {api_key}",
+    }
+    ssl_context = get_ssl_context()
+    client = httpx.Client(
+        base_url=base_url,
+        headers=headers,
+        timeout=timeout,
+        verify=ssl_context,
+    )
+    async_client = httpx.AsyncClient(
+        base_url=base_url,
+        headers=headers,
+        timeout=timeout,
+        verify=ssl_context,
+    )
+    return client, async_client

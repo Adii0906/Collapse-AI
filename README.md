@@ -17,6 +17,133 @@ Think of it as a stress test for ideas, projects, and AI systems before time, mo
 
 ---
 
+# System Collapse AI
+
+## Working
+
+### Without Neo4j
+
+```text
+User Idea
+   ↓
+LLM
+   ↓
+Text Response
+```
+
+This is essentially a chatbot. The LLM generates answers but does not reason over relationships, dependencies, or system-wide impacts.
+
+---
+
+### With Neo4j
+
+```text
+User
+ ↓
+LLM extracts graph
+ ↓
+Neo4j stores graph
+ ↓
+Neo4j finds dependencies
+ ↓
+LLM explains results
+```
+
+The LLM creates the knowledge graph, Neo4j performs graph reasoning and dependency analysis, and the LLM converts the results into human-readable insights.
+
+---
+
+## Example Workflow
+
+```text
+Build Uber for Pets
+        ↓
+Graph appears
+        ↓
+Click Payments
+        ↓
+Half the graph turns red
+        ↓
+Impact Score: 95
+        ↓
+AI explains why
+```
+
+---
+
+## How It Works
+
+### Step 1: Requirement Discovery
+
+User enters a startup idea:
+
+```text
+Build Uber for Pets
+```
+
+AI extracts components such as:
+
+- Authentication
+- Payments
+- Orders
+- GPS Tracking
+- Reviews
+- Notifications
+- Insurance
+- Vet Verification
+- Refunds
+
+---
+
+### Step 2: Dependency Mapping
+
+The system creates relationships between components:
+
+```text
+Orders ─────► Payments
+Refunds ────► Payments
+Notifications ─► Orders
+GPS Tracking ─► Orders
+Insurance ───► Vet Verification
+```
+
+These are stored as nodes and relationships in Neo4j.
+
+---
+
+### Step 3: Blast Radius Analysis
+
+When a component fails:
+
+```text
+Payments
+```
+
+Neo4j traverses the graph and identifies all affected systems.
+
+Example:
+
+```text
+Affected Systems:
+- Orders
+- Refunds
+- Notifications
+- Customer Checkout
+```
+
+---
+
+### Step 4: AI Explanation
+
+The affected nodes are passed to the LLM, which generates a human-readable explanation:
+
+> If Payments fail, customers cannot complete purchases, refunds become unavailable, and order-related services stop functioning.
+
+---
+
+## Key Insight
+
+**The LLM creates the graph. Neo4j performs the reasoning. The LLM explains the reasoning.**
 ## Architecture
 
 ```
