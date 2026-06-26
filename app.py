@@ -1,7 +1,6 @@
 import streamlit as st
 import json
-from neo4j import GraphDatabase
-from config import get_neo4j_config, get_secret
+from config import get_secret
 from pyvis.network import Network
 import tempfile
 import streamlit.components.v1 as components
@@ -12,7 +11,7 @@ from agents import (
     run_blast_radius_agent,
     run_explanation_agent,
 )
-from neo4j_ops import (
+from graph_ops import (
     clear_graph,
     store_components,
     store_dependencies,
@@ -36,15 +35,39 @@ st.markdown("""
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
 
   html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-  .stApp { background: #0a0e1a; color: #e2e8f0; }
+  .stApp {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(124,58,237,0.12), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(29,78,216,0.12), transparent 55%),
+      #0a0e1a;
+    color: #e2e8f0;
+  }
 
   /* Sidebar */
   [data-testid="stSidebar"] { background: #0d1117 !important; border-right: 1px solid #1e293b; }
   [data-testid="stSidebar"] * { color: #94a3b8 !important; }
   [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #f1f5f9 !important; }
 
+  /* How-to-Use guide steps */
+  .guide-step { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #161e2e; }
+  .guide-step:last-child { border-bottom: none; }
+  .guide-num {
+    flex: none; width: 24px; height: 24px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    color: #c4b5fd !important; background: linear-gradient(135deg, rgba(29,78,216,0.25), rgba(124,58,237,0.25));
+    border: 1px solid #312e81;
+  }
+  .guide-title { color: #e2e8f0 !important; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+  .guide-desc { color: #64748b !important; font-size: 11px; line-height: 1.4; margin-top: 2px; }
+
   /* Metric cards */
-  [data-testid="stMetric"] { background: #0d1117; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; }
+  [data-testid="stMetric"] {
+    background: linear-gradient(180deg, #0f1521, #0d1117);
+    border: 1px solid #1e293b; border-radius: 14px; padding: 16px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  [data-testid="stMetric"]:hover { border-color: #3b82f6; transform: translateY(-2px); }
   [data-testid="stMetricValue"] { color: #f1f5f9 !important; font-family: 'JetBrains Mono', monospace; }
   [data-testid="stMetricLabel"] { color: #64748b !important; }
 
@@ -65,7 +88,8 @@ st.markdown("""
   .stButton > button:hover { opacity: 0.9 !important; transform: translateY(-1px) !important; }
 
   /* Custom cards */
-  .card { background: #0d1117; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; margin: 8px 0; }
+  .card { background: #0d1117; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; margin: 8px 0; transition: border-color 0.2s; }
+  .card:hover { border-color: #334155; }
   .card-red { background: #0d1117; border: 1px solid #7f1d1d; border-radius: 12px; padding: 20px; margin: 8px 0; }
   .card-yellow { background: #0d1117; border: 1px solid #78350f; border-radius: 12px; padding: 20px; margin: 8px 0; }
   .card-green { background: #0d1117; border: 1px solid #14532d; border-radius: 12px; padding: 20px; margin: 8px 0; }
@@ -185,38 +209,33 @@ def build_pyvis(nodes, edges, highlighted: list = None, selected: str = None) ->
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="logo-text"><span class="logo-red">SYS</span><span class="logo-white">::COLLAPSE</span></div>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#475569;font-size:12px;margin-top:4px;">Agentic GraphRAG Failure Predictor</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#475569;font-size:12px;margin-top:4px;">Agentic Graph Failure Predictor</p>', unsafe_allow_html=True)
     st.divider()
 
-    st.markdown('<div class="section-header">Neo4j Status</div>', unsafe_allow_html=True)
-    uri, username, password = get_neo4j_config()
-
-    if not uri or not username or not password:
-        st.markdown('🔴 <span style="color:#ef4444;font-size:13px;">Connection Failed</span>', unsafe_allow_html=True)
-        st.caption("NEO4J_URI, NEO4J_USERNAME, and NEO4J_PASSWORD are required. Configure them in .streamlit/secrets.toml or a .env file.")
-        if uri:
-            st.caption(f"Loaded URI: {uri}")
+    st.markdown('<div class="section-header">Engine Status</div>', unsafe_allow_html=True)
+    if get_secret("MISTRAL_API_KEY"):
+        st.markdown('🟢 <span style="color:#10b981;font-size:13px;">In-Memory Graph Engine Ready</span>', unsafe_allow_html=True)
+        st.caption("Powered by NetworkX — zero database setup required.")
     else:
-        try:
-            driver = GraphDatabase.driver(uri, auth=(username, password))
-            driver.verify_connectivity()
-            st.markdown('🟢 <span style="color:#10b981;font-size:13px;">AuraDB Connected</span>', unsafe_allow_html=True)
-            driver.close()
-        except Exception as e:
-            st.markdown('🔴 <span style="color:#ef4444;font-size:13px;">Connection Failed</span>', unsafe_allow_html=True)
-            st.caption(str(e)[:200])
+        st.markdown('🟡 <span style="color:#f59e0b;font-size:13px;">Add your Mistral API key</span>', unsafe_allow_html=True)
+        st.caption("Set MISTRAL_API_KEY in .streamlit/secrets.toml or a .env file to enable the AI agents.")
 
     st.divider()
-    st.markdown('<div class="section-header">How it works</div>', unsafe_allow_html=True)
-    for i, step in enumerate([
-        "Enter startup idea",
-        "AI extracts system components",
-        "Dependencies mapped to Neo4j",
-        "Click any node to simulate failure",
-        "Neo4j traverses blast radius",
-        "AI explains cascading impact",
+    st.markdown('<div class="section-header">How to Use</div>', unsafe_allow_html=True)
+    for i, (title, desc) in enumerate([
+        ("Describe your idea", "Type any startup or system idea in the input box."),
+        ("Analyze the architecture", "AI agents extract components, map dependencies & score risk."),
+        ("Explore the graph", "An interactive dependency graph is rendered instantly."),
+        ("Simulate a failure", "Pick any component to knock it offline."),
+        ("Watch the blast radius", "The cascade lights up red across every affected system."),
+        ("Read the AI analysis", "Get an SRE-style explanation of what breaks and why."),
     ], 1):
-        st.markdown(f'<p style="color:#64748b;font-size:12px;margin:4px 0;"><span style="color:#3b82f6;font-family:JetBrains Mono;">{i:02d}.</span> {step}</p>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="guide-step"><span class="guide-num">{i:02d}</span>'
+            f'<div><div class="guide-title">{title}</div>'
+            f'<div class="guide-desc">{desc}</div></div></div>',
+            unsafe_allow_html=True,
+        )
 
     st.divider()
     if st.session_state.graph_built:
@@ -234,8 +253,12 @@ with st.sidebar:
 
 
 # ── Main layout ───────────────────────────────────────────────────────────────
-st.markdown('<h1 style="font-family:JetBrains Mono;font-size:28px;color:#f1f5f9;margin-bottom:4px;">⚡ System Collapse AI</h1>', unsafe_allow_html=True)
-st.markdown('<p style="color:#475569;font-size:14px;margin-bottom:24px;">Convert startup ideas into dependency graphs. Predict cascading failures. Survive the collapse.</p>', unsafe_allow_html=True)
+st.markdown("""
+<h1 style="font-family:'JetBrains Mono',monospace;font-size:30px;margin-bottom:4px;font-weight:700;">
+  ⚡ <span style="background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">System Collapse AI</span>
+</h1>
+""", unsafe_allow_html=True)
+st.markdown('<p style="color:#64748b;font-size:14px;margin-bottom:24px;">Convert <b style="color:#93c5fd;">startup ideas</b> into <b style="color:#93c5fd;">dependency graphs</b>. Predict <b style="color:#fca5a5;">cascading failures</b>. Survive the collapse.</p>', unsafe_allow_html=True)
 
 # ── Input section ─────────────────────────────────────────────────────────────
 if not st.session_state.graph_built:
@@ -264,7 +287,7 @@ if not st.session_state.graph_built:
                     risk_data = run_risk_analysis(components, deps)
                     st.session_state.risk_scores = risk_data
 
-                with st.spinner("Storing in Neo4j AuraDB..."):
+                with st.spinner("Building dependency graph..."):
                     clear_graph()
                     store_components(components, risk_data)
                     store_dependencies(deps)
@@ -319,7 +342,7 @@ else:
 
         if selected and selected != "— Select a component —" and selected != st.session_state.selected_node:
             st.session_state.selected_node = selected
-            with st.spinner(f"Neo4j traversing blast radius from {selected}..."):
+            with st.spinner(f"Traversing blast radius from {selected}..."):
                 blast = get_blast_radius(selected)
                 st.session_state.blast_result = blast
             with st.spinner("Running Blast Radius + Explanation Agents..."):
@@ -413,7 +436,7 @@ else:
             <div class="card" style="text-align:center;padding:60px 20px;">
               <div style="font-size:48px;margin-bottom:16px;">⚡</div>
               <div style="font-size:16px;color:#f1f5f9;font-weight:600;margin-bottom:8px;">Select a node to simulate failure</div>
-              <div style="font-size:13px;color:#475569;">Neo4j will traverse the dependency graph and reveal the cascade</div>
+              <div style="font-size:13px;color:#475569;">The engine will traverse the dependency graph and reveal the cascade</div>
             </div>
             """, unsafe_allow_html=True)
 

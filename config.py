@@ -1,4 +1,4 @@
-"""Load Neo4j and API credentials from Streamlit secrets or environment."""
+"""Load API credentials from Streamlit secrets or environment."""
 
 import os
 import ssl
@@ -27,13 +27,6 @@ def get_secret(key: str, default: str = "") -> str:
     except Exception:
         pass
     return os.getenv(key, default)
-
-
-def get_neo4j_config() -> tuple[str, str, str]:
-    uri = get_secret("NEO4J_URI")
-    username = get_secret("NEO4J_USERNAME")
-    password = get_secret("NEO4J_PASSWORD")
-    return uri, username, password
 
 
 def make_mistral_http_clients(api_key: str, timeout: int = 120) -> tuple[httpx.Client, httpx.AsyncClient]:

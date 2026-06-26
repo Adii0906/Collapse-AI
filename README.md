@@ -1,55 +1,56 @@
-# ⚡Collapse AI
+# ⚡ Collapse AI
 
-> Neo4j-powered Agentic GraphRAG system that converts startup ideas into dependency graphs and predicts cascading failures.
-
+> An **Agentic Graph** system that turns startup ideas into **dependency graphs** and predicts **cascading failures** before they happen — with **zero database setup**.
 
 Most AI agents today are great at building things, but they're terrible at predicting failure.
 
-When we use AI coding tools, we keep saying "build this", "refine this", "add this feature", and eventually we end up with a complex system. But neither the AI nor the developer has a clear understanding of the project's critical dependencies and failure points.
+When we use AI coding tools, we keep saying *"build this"*, *"refine this"*, *"add this feature"*, and eventually we end up with a complex system. But neither the AI nor the developer has a clear understanding of the project's **critical dependencies** and **failure points**.
 
- Collapse AI, an agentic system that maps dependencies from a project idea or document and predicts cascading failures before they happen.
+**Collapse AI** is an agentic system that maps dependencies from a project idea and predicts cascading failures before they happen.
 
-Instead of answering "How do I build this?", it answers "What breaks if this fails?"
+Instead of answering *"How do I build this?"*, it answers **"What breaks if this fails?"**
 
-Using document intelligence, the system extracts key entities and dependencies, stores them as a graph in Neo4j, and uses AI agents to simulate failure scenarios, identify single points of failure, calculate risk scores, and suggest recovery plans.
+The system extracts key components and dependencies, holds them as an **in-memory graph** (powered by **NetworkX**), and uses **AI agents** to simulate failure scenarios, identify **single points of failure**, calculate **risk scores**, and explain the blast radius.
 
-Think of it as a stress test for ideas, projects, and AI systems before time, money, and tokens are wasted building the wrong thing.
-
----
-
-# System Collapse AI
-
-## Working
-
-### Without Neo4j
-
-```text
-User Idea
-   ↓
-LLM
-   ↓
-Text Response
-```
-
-This is essentially a chatbot. The LLM generates answers but does not reason over relationships, dependencies, or system-wide impacts.
+Think of it as a **stress test for ideas** before time, money, and tokens are wasted building the wrong thing.
 
 ---
 
-### With Neo4j
+## ✨ Highlights
 
-```text
-User
- ↓
-LLM extracts graph
- ↓
-Neo4j stores graph
- ↓
-Neo4j finds dependencies
- ↓
-LLM explains results
-```
+- **No database required** — the dependency graph lives in memory via **NetworkX**.
+- **5 AI agents** — discovery, dependency mapping, risk scoring, blast radius, and explanation.
+- **Interactive graph** — click any node to simulate a failure and watch the **cascade** light up.
+- **One dependency to configure** — just a **Mistral API key**.
 
-The LLM creates the knowledge graph, Neo4j performs graph reasoning and dependency analysis, and the LLM converts the results into human-readable insights.
+---
+
+## 🚀 How to Use
+
+> Follow these **six steps** — the whole flow takes under a minute.
+
+### 1. **Describe your idea**
+Type any startup or system idea into the input box, e.g. **"Build Uber for Pets"**.
+
+### 2. **Analyze the architecture**
+Click **Analyze System Architecture**. The AI agents run in sequence and:
+- **Extract** the system components,
+- **Map** the `DEPENDS_ON` relationships,
+- **Score** each component's risk from **0–100**.
+
+### 3. **Explore the graph**
+An **interactive dependency graph** renders instantly. Node **color** = risk level, node **size** = importance.
+
+### 4. **Simulate a failure**
+Pick any component from the **Select node** dropdown to knock it **offline**.
+
+### 5. **Watch the blast radius**
+Every **affected system** lights up **red**, and you get an **Impact Score**, the **failure depth**, and the count of **systems down**.
+
+### 6. **Read the AI analysis**
+The engine hands the affected nodes to the LLM, which writes a concise **SRE-style explanation** of what breaks and why.
+
+> 💡 **Tip:** Check the **Critical Nodes** panel — those are your **single points of failure**.
 
 ---
 
@@ -71,95 +72,44 @@ AI explains why
 
 ---
 
-## How It Works
-
-### Step 1: Requirement Discovery
-
-User enters a startup idea:
+## 🧠 How It Works
 
 ```text
-Build Uber for Pets
+User Idea
+   │
+   ▼
+LLM extracts the component graph
+   │
+   ▼
+NetworkX holds the graph in memory
+   │
+   ▼
+NetworkX traverses dependencies (blast radius)
+   │
+   ▼
+LLM explains the results in plain English
 ```
 
-AI extracts components such as:
-
-- Authentication
-- Payments
-- Orders
-- GPS Tracking
-- Reviews
-- Notifications
-- Insurance
-- Vet Verification
-- Refunds
+**The LLM creates the graph. NetworkX performs the reasoning. The LLM explains the reasoning.**
 
 ---
 
-### Step 2: Dependency Mapping
-
-The system creates relationships between components:
-
-```text
-Orders ─────► Payments
-Refunds ────► Payments
-Notifications ─► Orders
-GPS Tracking ─► Orders
-Insurance ───► Vet Verification
-```
-
-These are stored as nodes and relationships in Neo4j.
-
----
-
-### Step 3: Blast Radius Analysis
-
-When a component fails:
-
-```text
-Payments
-```
-
-Neo4j traverses the graph and identifies all affected systems.
-
-Example:
-
-```text
-Affected Systems:
-- Orders
-- Refunds
-- Notifications
-- Customer Checkout
-```
-
----
-
-### Step 4: AI Explanation
-
-The affected nodes are passed to the LLM, which generates a human-readable explanation:
-
-> If Payments fail, customers cannot complete purchases, refunds become unavailable, and order-related services stop functioning.
-
----
-
-## Key Insight
-
-**The LLM creates the graph. Neo4j performs the reasoning. The LLM explains the reasoning.**
 ## Architecture
 
-```
+```text
 Startup Idea
      │
      ▼
-[Agent 1: Requirement Discovery]  ─── Extracts 8-14 system components
+[Agent 1: Requirement Discovery]  ─── Extracts 8–14 system components
      │
      ▼
 [Agent 2: Dependency Mapping]     ─── Maps DEPENDS_ON relationships
      │
      ▼
-[Agent 3: Risk Analysis]          ─── Scores each component 0-100
+[Agent 3: Risk Analysis]          ─── Scores each component 0–100
      │
      ▼
-     Neo4j AuraDB  ◄──────────────── Stores graph + vector indexes
+     NetworkX (in-memory graph)   ◄─── Holds nodes + edges
      │
      ▼
 [PyVis Visualization]             ─── Interactive graph in Streamlit
@@ -168,88 +118,62 @@ Startup Idea
 [User clicks a node]
      │
      ▼
-[Neo4j Cypher Traversal]          ─── Variable-length path blast radius
+[Graph Traversal]                 ─── Variable-length blast radius
      │
      ▼
-[Agent 4: Blast Radius Scoring]   ─── Impact score 0-100
+[Agent 4: Blast Radius Scoring]   ─── Impact score 0–100
      │
      ▼
 [Agent 5: Explanation]            ─── SRE-style failure narrative
 ```
 
-## Neo4j Schema
+---
 
-```cypher
-// Nodes
-(:Component {
-  name: String,          // "Payments"
-  risk_score: Integer,   // 0-100
-  category: String,      // "Financial", "Security", etc.
-  created_at: Long       // timestamp
-})
+## Graph Model
 
-// Relationships
-(:Component)-[:DEPENDS_ON]->(:Component)
-// A DEPENDS_ON B = "A fails when B fails"
-// = "B's failure propagates to A"
+```text
+Node:  Component { name, risk_score (0–100), category }
+Edge:  (A) ──DEPENDS_ON──▶ (B)
+       "A fails when B fails"  →  B's failure propagates to A
 ```
 
-## Key Cypher Queries
+**Blast radius** = every node that (directly or transitively) depends on the failed node — found with `networkx.ancestors`.
 
-### Blast Radius (variable-length traversal)
-```cypher
-MATCH path = (dependent:Component)-[:DEPENDS_ON*1..]->(failed:Component {name: $name})
-WHERE dependent.name <> $name
-WITH dependent, length(path) AS depth
-ORDER BY depth ASC
-RETURN COLLECT(DISTINCT dependent.name) AS affected_nodes,
-       MAX(depth) AS max_depth
-```
-
-### Critical Nodes (single points of failure)
-```cypher
-MATCH (c:Component)<-[:DEPENDS_ON]-(dependent:Component)
-WITH c, COUNT(DISTINCT dependent) AS dependent_count
-WHERE dependent_count >= 2
-RETURN c.name AS name
-ORDER BY dependent_count DESC
-LIMIT 5
-```
+**Critical nodes** = components with the highest **in-degree** (the most dependents) — i.e. **single points of failure**.
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
 ### 1. Clone and install
 
 ```bash
 git clone <this-repo>
-cd system_collapse_ai
-pip install -r requirements.txt
+cd collapse_ai
+pip install -e .          # or: uv sync
 ```
 
-### 2. Configure secrets
+### 2. Configure your key
 
-Copy `.env.example` to `.env` and fill in your credentials:
+Copy `.env.example` to `.env` and add your key:
 
 ```bash
 cp .env.example .env
 ```
 
-Or set up Streamlit secrets (recommended):
-
-```bash
-mkdir -p .streamlit
-cp .streamlit/secrets.toml .streamlit/secrets.toml
-# Edit .streamlit/secrets.toml with your values
+```env
+MISTRAL_API_KEY = "your-mistral-api-key"
 ```
 
-### 3. Get your API keys
+Or use Streamlit secrets (`.streamlit/secrets.toml`):
 
-- **Neo4j AuraDB**: Already configured (use your AuraDB password)
-- **Mistral API**: https://console.mistral.ai → Get API Key (free tier available)
+```toml
+MISTRAL_API_KEY = "your-mistral-api-key"
+```
 
-### 4. Run
+> Get a free **Mistral API key** at https://console.mistral.ai → **API Keys**.
+
+### 3. Run
 
 ```bash
 streamlit run app.py
@@ -259,15 +183,16 @@ streamlit run app.py
 
 ## Project Structure
 
-```
-system_collapse_ai/
+```text
+collapse_ai/
 ├── app.py              # Main Streamlit UI
 ├── agents.py           # 5 AI agents (Mistral-powered)
-├── neo4j_ops.py        # All Neo4j operations + Cypher queries
-├── requirements.txt
+├── graph_ops.py        # In-memory graph engine (NetworkX)
+├── config.py           # Loads the Mistral API key
+├── pyproject.toml
 ├── .env.example
 ├── .streamlit/
-│   └── secrets.toml
+│   └── secrets.toml.example
 └── README.md
 ```
 
@@ -277,21 +202,21 @@ system_collapse_ai/
 
 | Agent | Role |
 |-------|------|
-| Requirement Discovery | Extracts system components from startup idea |
-| Dependency Mapping | Creates DEPENDS_ON relationships |
-| Risk Analysis | Scores each component 0-100 |
-| Blast Radius | Interprets Neo4j traversal into impact score |
-| Explanation | Generates SRE-style failure narrative |
+| **Requirement Discovery** | Extracts system components from the startup idea |
+| **Dependency Mapping** | Creates `DEPENDS_ON` relationships |
+| **Risk Analysis** | Scores each component **0–100** |
+| **Blast Radius** | Turns the graph traversal into an **impact score** |
+| **Explanation** | Generates an **SRE-style** failure narrative |
 
 ---
 
 ## Demo Script
 
-1. Type: **"Uber for Pets"**
+1. Type **"Uber for Pets"**
 2. Click **Analyze System Architecture**
-3. Watch agents run and graph appear
+3. Watch the agents run and the graph appear
 4. Select **"Payments"** from the dropdown
-5. Show: red cascade, impact score, affected systems
-6. Read the AI explanation
-7. Select **"Authentication"** — show different blast radius
-8. Point to Critical Nodes panel — "these are single points of failure"
+5. Show the **red cascade**, the **impact score**, and the **affected systems**
+6. Read the **AI explanation**
+7. Select **"Authentication"** — show a different **blast radius**
+8. Point to the **Critical Nodes** panel — *"these are the single points of failure"*
