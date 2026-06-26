@@ -10,6 +10,7 @@ from agents import (
     run_risk_analysis,
     run_blast_radius_agent,
     run_explanation_agent,
+    run_chat_agent,
 )
 from graph_ops import (
     clear_graph,
@@ -47,6 +48,24 @@ st.markdown("""
   [data-testid="stSidebar"] { background: #0d1117 !important; border-right: 1px solid #1e293b; }
   [data-testid="stSidebar"] * { color: #94a3b8 !important; }
   [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #f1f5f9 !important; }
+
+  /* Feature cards (How to use the features) */
+  .feature-card {
+    position: relative; background: linear-gradient(180deg, #0f1521, #0b0f18);
+    border: 1px solid #1e293b; border-radius: 16px; padding: 20px 18px 18px;
+    height: 100%; overflow: hidden; transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature-card:hover { transform: translateY(-3px); }
+  .feature-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent, linear-gradient(90deg,#60a5fa,#a78bfa));
+  }
+  .feature-card.red { border-color: #3f1d2e; } .feature-card.red:hover { border-color: #ef4444; }
+  .feature-card.amber { border-color: #3a2a12; } .feature-card.amber:hover { border-color: #f59e0b; }
+  .feature-card.blue { border-color: #1c2a4a; } .feature-card.blue:hover { border-color: #3b82f6; }
+  .feature-icon { font-size: 22px; margin-bottom: 8px; display: block; }
+  .feature-title { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+  .feature-desc { font-size: 12px; color: #94a3b8; line-height: 1.55; }
 
   /* How-to-Use guide steps */
   .guide-step { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #161e2e; }
@@ -131,6 +150,7 @@ for key, default in {
     "risk_scores": {},
     "critical_nodes": [],
     "graph_html": None,
+    "chat_history": [],
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -247,8 +267,8 @@ with st.sidebar:
             st.markdown(f'<span class="badge-red">⚠ {len(st.session_state.critical_nodes)} Critical Nodes</span>', unsafe_allow_html=True)
         if st.button("🗑 Reset Graph", use_container_width=True):
             clear_graph()
-            for key in ["graph_built","components","dependencies","all_nodes","all_edges","blast_result","selected_node","explanation","risk_scores","critical_nodes","graph_html"]:
-                st.session_state[key] = [] if key in ["components","dependencies","all_nodes","all_edges","critical_nodes"] else (False if key=="graph_built" else (None if key in ["blast_result","selected_node","graph_html"] else ("" if key=="explanation" else {})))
+            for key in ["graph_built","components","dependencies","all_nodes","all_edges","blast_result","selected_node","explanation","risk_scores","critical_nodes","graph_html","chat_history"]:
+                st.session_state[key] = [] if key in ["components","dependencies","all_nodes","all_edges","critical_nodes","chat_history"] else (False if key=="graph_built" else (None if key in ["blast_result","selected_node","graph_html"] else ("" if key=="explanation" else {})))
             st.rerun()
 
 
@@ -258,7 +278,39 @@ st.markdown("""
   ⚡ <span style="background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">System Collapse AI</span>
 </h1>
 """, unsafe_allow_html=True)
-st.markdown('<p style="color:#64748b;font-size:14px;margin-bottom:24px;">Convert <b style="color:#93c5fd;">startup ideas</b> into <b style="color:#93c5fd;">dependency graphs</b>. Predict <b style="color:#fca5a5;">cascading failures</b>. Survive the collapse.</p>', unsafe_allow_html=True)
+st.markdown('<p style="color:#64748b;font-size:14px;margin-bottom:20px;">Convert <b style="color:#93c5fd;">startup ideas</b> into <b style="color:#93c5fd;">dependency graphs</b>. Predict <b style="color:#fca5a5;">cascading failures</b>. Survive the collapse.</p>', unsafe_allow_html=True)
+
+# ── How to use the features ───────────────────────────────────────────────────
+st.markdown('<div class="section-header">How to Use the Features</div>', unsafe_allow_html=True)
+fc1, fc2, fc3 = st.columns(3)
+with fc1:
+    st.markdown(
+        '<div class="feature-card red" style="--accent:linear-gradient(90deg,#f87171,#ef4444);">'
+        '<span class="feature-icon">🔥</span>'
+        '<div class="feature-title">AI Failure Analysis</div>'
+        '<div class="feature-desc">An SRE-style post-mortem of what breaks and why after a node fails.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+with fc2:
+    st.markdown(
+        '<div class="feature-card amber" style="--accent:linear-gradient(90deg,#fbbf24,#f59e0b);">'
+        '<span class="feature-icon">⚠️</span>'
+        '<div class="feature-title">Critical Nodes</div>'
+        '<div class="feature-desc">Your single points of failure — the components everything else depends on.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+with fc3:
+    st.markdown(
+        '<div class="feature-card blue" style="--accent:linear-gradient(90deg,#60a5fa,#3b82f6);">'
+        '<span class="feature-icon">📊</span>'
+        '<div class="feature-title">Component Risk Scores</div>'
+        '<div class="feature-desc">Every component ranked 0–100, sorted highest-risk first.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+st.markdown('<div style="margin-bottom:24px;"></div>', unsafe_allow_html=True)
 
 # ── Input section ─────────────────────────────────────────────────────────────
 if not st.session_state.graph_built:
@@ -373,6 +425,33 @@ else:
           <span style="font-size:11px;color:#64748b;">🟢 Low Risk</span>
         </div>
         """, unsafe_allow_html=True)
+
+        # ── Ask about your system (chat) ──────────────────────────────────────
+        st.divider()
+        st.markdown('<div class="section-header">Ask About Your System</div>', unsafe_allow_html=True)
+        st.caption("Ask anything about the components, dependencies, risk scores, or failure points.")
+
+        for turn in st.session_state.chat_history:
+            with st.chat_message("user" if turn["role"] == "user" else "assistant"):
+                st.markdown(turn["content"])
+
+        prompt = st.chat_input("e.g. Which component should I make redundant first?")
+        if prompt:
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing your system..."):
+                    answer = run_chat_agent(
+                        prompt,
+                        st.session_state.components,
+                        st.session_state.dependencies,
+                        st.session_state.risk_scores,
+                        st.session_state.critical_nodes,
+                        history=st.session_state.chat_history[:-1],
+                    )
+                st.markdown(answer)
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
     with col_panel:
         if st.session_state.blast_result and st.session_state.selected_node:

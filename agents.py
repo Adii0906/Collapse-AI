@@ -257,3 +257,42 @@ Explain the real-world cascading failure consequences in 3-4 technical sentences
     ]
     response = llm.invoke(messages)
     return response.content.strip()
+
+
+def run_chat_agent(
+    question: str,
+    components: list[str],
+    deps: list[dict],
+    risk_scores: dict,
+    critical_nodes: list[str],
+    history: list[dict] | None = None,
+) -> str:
+    """
+    Answer a free-form question about the analyzed system, grounded in its graph.
+    """
+    dep_lines = [f"{d.get('from')} depends on {d.get('to')}" for d in deps]
+    risk_lines = [f"{name}: {score}/100" for name, score in sorted(risk_scores.items(), key=lambda x: x[1], reverse=True)]
+
+    llm = _get_llm(temperature=0.4)
+    messages = [
+        SystemMessage(content="""You are an architecture and reliability assistant for the user's system.
+Answer questions using ONLY the provided components, dependencies, risk scores, and critical nodes.
+Be concise and specific (2-5 sentences). If something isn't in the graph, say so plainly.
+No headers. Plain prose or short bullets only."""),
+        SystemMessage(content=f"""System context:
+- Components ({len(components)}): {', '.join(components)}
+- Dependencies: {'; '.join(dep_lines) if dep_lines else 'none'}
+- Risk scores: {'; '.join(risk_lines) if risk_lines else 'none'}
+- Critical nodes (single points of failure): {', '.join(critical_nodes) if critical_nodes else 'none'}"""),
+    ]
+    for turn in (history or []):
+        role = turn.get("role")
+        content = turn.get("content", "")
+        if role == "user":
+            messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            messages.append(SystemMessage(content=f"(your previous answer) {content}"))
+    messages.append(HumanMessage(content=question))
+
+    response = llm.invoke(messages)
+    return response.content.strip()
